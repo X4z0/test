@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>จัดการร้าน – IT Store</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"><div class="bar">
+  <a class="logo" href="/">IT<span>Store</span> · จัดการร้าน</a>
+  <a class="btn" href="/">ดูหน้าร้าน</a>
+  <button class="btn" id="logout">ออกจากระบบ</button>
+</div></header>
+
+<main id="gate" hidden>
+  <div class="tabs" role="tablist">
+    <button class="btn" role="tab" id="tabP" aria-selected="true">สินค้า</button>
+    <button class="btn" role="tab" id="tabO" aria-selected="false">คำสั่งซื้อ</button>
+  </div>
+
+  <section id="pSec">
+    <div class="tools"><input id="pq" type="search" placeholder="ค้นหาสินค้าในรายการ"><button class="btn primary" id="addBtn">เพิ่มสินค้าใหม่</button></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th></th><th>ชื่อสินค้า</th><th>หมวด</th><th>ราคา</th><th>สต็อก</th><th></th></tr></thead>
+      <tbody id="pBody"></tbody>
+    </table></div>
+  </section>
+
+  <section id="oSec" hidden>
+    <div class="table-wrap"><table>
+      <thead><tr><th>วันที่</th><th>ลูกค้า</th><th>รายการ</th><th>รวม</th><th>สถานะ</th></tr></thead>
+      <tbody id="oBody"></tbody>
+    </table></div>
+  </section>
+</main>
+
+<main id="denied" hidden>
+  <p class="empty">หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</p>
+  <div style="max-width:340px;margin:auto">
+    <div class="field"><label for="lEmail">อีเมล</label><input id="lEmail" type="email"></div>
+    <div class="field"><label for="lPass">รหัสผ่าน</label><input id="lPass" type="password"></div>
+    <p class="msg" id="lMsg"></p>
+    <button class="btn primary" id="lGo" style="width:100%">เข้าสู่ระบบผู้ดูแล</button>
+  </div>
+</main>
+
+<div class="overlay" id="formOv"><div class="modal" role="dialog" aria-modal="true">
+  <button class="x" data-close aria-label="ปิด">×</button>
+  <h2 id="formTitle">เพิ่มสินค้า</h2>
+  <div class="field"><label for="fName">ชื่อสินค้า</label><input id="fName"></div>
+  <div class="two">
+    <div class="field"><label for="fCat">หมวดหมู่</label><input id="fCat" list="cats"><datalist id="cats"></datalist></div>
+    <div class="field"><label for="fPrice">ราคา (บาท)</label><input id="fPrice" type="number" min="0"></div>
+  </div>
+  <div class="field"><label for="fStock">จำนวนในสต็อก</label><input id="fStock" type="number" min="0"></div>
+  <div class="field"><label for="fImg">ลิงก์รูปภาพ</label><input id="fImg" placeholder="https://..."></div>
+  <div class="field"><label for="fDesc">รายละเอียด</label><textarea id="fDesc" rows="3"></textarea></div>
+  <p class="msg" id="fMsg"></p>
+  <button class="btn primary" id="saveBtn" style="width:100%">บันทึก</button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="common.js"></script>
+<script>
+let products = [], editId = null;
+
+/* ตรวจบทบาทฝั่งหน้าเว็บ (แค่ซ่อน/แสดง) — ความปลอดภัยจริงอยู่ที่เซิร์ฟเวอร์ที่เช็ก role ทุก API */
+function gate() {
+  const ok = Auth.user && Auth.user.role === 'admin';
+  $('#gate').hidden = !ok; $('#denied').hidden = ok;
+  if (ok) { loadProducts(); loadOrders(); }
+}
+$('#lGo').onclick = async () => {
+  try {
+    const d = await api('/login', { method: 'POST', body: { email: $('#lEmail').value, password: $('#lPass').value } });
+    if (d.user.role !== 'admin') { $('#lMsg').textContent = 'บัญชีนี้ไม่ใช่ผู้ดูแลระบบ'; return; }
+    Auth.save(d); gate();
+  } catch (e) { $('#lMsg').textContent = e.message; }
+};
+$('#logout').onclick = () => { Auth.clear(); location.href = '/'; };
+
+$('#tabP').onclick = () => tab(true); $('#tabO').onclick = () => tab(false);
+function tab(p) {
+  $('#pSec').hidden = !p; $('#oSec').hidden = p;
+  $('#tabP').setAttribute('aria-selected', p); $('#tabO').setAttribute('aria-selected', !p);
+  if (!p) loadOrders();
+}
+
+/* ---------- สินค้า ---------- */
+async function loadProducts() {
+  products = await api('/products');
+  $('#cats').innerHTML = [...new Set(products.map(p => p.category))].map(c => `<option value="${esc(c)}">`).join('');
+  renderProducts();
+}
+function renderProducts() {
+  const q = $('#pq').value.toLowerCase();
+  $('#pBody').innerHTML = products.filter(p => p.name.toLowerCase().includes(q)).map(p => `
+    <tr><td><img src="${esc(p.imageUrl)}" alt=""></td><td>${esc(p.name)}</td><td>${esc(p.category)}</td>
+    <td>${baht(p.price)}</td><td>${p.stock}</td>
+    <td><div class="row-actions"><button class="btn sm" data-edit="${p._id}">แก้ไข</button><button class="btn sm danger" data-del="${p._id}">ลบ</button></div></td></tr>`).join('');
+}
+$('#pq').oninput = renderProducts;
+$('#pBody').addEventListener('click', async e => {
+  const ed = e.target.dataset.edit, del = e.target.dataset.del;
+  if (ed) openForm(products.find(p => p._id === ed));
+  if (del) {
+    const p = products.find(x => x._id === del);
+    if (!confirm(`ลบ "${p.name}" ออกจากร้านถาวรใช่ไหม?`)) return;
+    try { await api('/products/' + del, { method: 'DELETE' }); toast('ลบสินค้าแล้ว'); loadProducts(); } catch (err) { toast(err.message, true); }
+  }
+});
+
+function openForm(p) {
+  editId = p ? p._id : null;
+  $('#formTitle').textContent = p ? 'แก้ไขสินค้า' : 'เพิ่มสินค้า';
+  $('#fName').value = p?.name || ''; $('#fCat').value = p?.category || ''; $('#fPrice').value = p?.price ?? '';
+  $('#fStock').value = p?.stock ?? ''; $('#fImg').value = p?.imageUrl || ''; $('#fDesc').value = p?.description || '';
+  $('#fMsg').textContent = ''; $('#formOv').classList.add('open');
+}
+$('#addBtn').onclick = () => openForm(null);
+$('#saveBtn').onclick = async () => {
+  const body = { name: $('#fName').value, category: $('#fCat').value, price: $('#fPrice').value, stock: $('#fStock').value, imageUrl: $('#fImg').value, description: $('#fDesc').value };
+  try {
+    await api(editId ? '/products/' + editId : '/products', { method: editId ? 'PUT' : 'POST', body });
+    $('#formOv').classList.remove('open'); toast('บันทึกแล้ว'); loadProducts();
+  } catch (e) { $('#fMsg').textContent = e.message; }
+};
+document.addEventListener('click', e => {
+  if (e.target.matches('[data-close]') || e.target.classList.contains('overlay')) $('#formOv').classList.remove('open');
+});
+
+/* ---------- คำสั่งซื้อ ---------- */
+const STATUS = { pending: 'รอชำระเงิน', paid: 'ชำระแล้ว', shipped: 'จัดส่งแล้ว', cancelled: 'ยกเลิก' };
+async function loadOrders() {
+  const list = await api('/orders');
+  $('#oBody').innerHTML = list.length ? list.map(o => `<tr>
+    <td>${new Date(o.createdAt).toLocaleString('th-TH')}</td>
+    <td>${esc(o.shipping.name)}<br><small>${esc(o.shipping.phone)}</small></td>
+    <td>${o.items.map(i => `${esc(i.name)} × ${i.qty}`).join('<br>')}</td>
+    <td>${baht(o.total)}</td>
+    <td><select data-status="${o._id}">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${o.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select></td>
+  </tr>`).join('') : '<tr><td colspan="5" class="empty">ยังไม่มีคำสั่งซื้อ</td></tr>';
+}
+$('#oBody').addEventListener('change', async e => {
+  const id = e.target.dataset.status; if (!id) return;
+  try { await api('/orders/' + id, { method: 'PATCH', body: { status: e.target.value } }); toast('อัปเดตสถานะแล้ว'); } catch (err) { toast(err.message, true); }
+});
+
+gate();
+</script>
+</body>
+</html>

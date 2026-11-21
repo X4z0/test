@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IT Store – อุปกรณ์ไอทีสำหรับโต๊ะทำงาน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"><div class="bar">
+  <a class="logo" href="/">IT<span>Store</span></a>
+  <span id="who"></span>
+  <a class="btn" id="adminLink" href="admin.html" hidden>จัดการร้าน</a>
+  <button class="btn" id="ordersBtn" hidden>คำสั่งซื้อของฉัน</button>
+  <button class="btn" id="authBtn">เข้าสู่ระบบ</button>
+  <button class="btn primary" id="cartBtn">ตะกร้า (<span id="cartCount">0</span>)</button>
+</div></header>
+
+<main>
+  <div class="tools">
+    <input id="q" type="search" placeholder="ค้นหาสินค้า เช่น คีย์บอร์ด, SSD" aria-label="ค้นหาสินค้า">
+    <select id="sort" aria-label="เรียงลำดับ">
+      <option value="">เรียงตามปกติ</option>
+      <option value="price-asc">ราคาต่ำ → สูง</option>
+      <option value="price-desc">ราคาสูง → ต่ำ</option>
+      <option value="new">มาใหม่</option>
+    </select>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="grid" id="grid"></div>
+  <p class="empty" id="empty" hidden>ไม่พบสินค้าที่ตรงกับการค้นหา ลองเปลี่ยนคำค้นหรือเลือกหมวดอื่น</p>
+</main>
+
+<!-- รายละเอียดสินค้า -->
+<div class="overlay" id="detailOv"><div class="modal" id="detail" role="dialog" aria-modal="true"></div></div>
+
+<!-- เข้าสู่ระบบ / สมัครสมาชิก -->
+<div class="overlay" id="authOv"><div class="modal" role="dialog" aria-modal="true">
+  <button class="x" data-close aria-label="ปิด">×</button>
+  <h2 id="authTitle">เข้าสู่ระบบ</h2>
+  <div class="field" id="nameF" hidden><label for="aName">ชื่อ</label><input id="aName" autocomplete="name"></div>
+  <div class="field"><label for="aEmail">อีเมล</label><input id="aEmail" type="email" autocomplete="email"></div>
+  <div class="field"><label for="aPass">รหัสผ่าน</label><input id="aPass" type="password" autocomplete="current-password"></div>
+  <p class="msg" id="authMsg"></p>
+  <button class="btn primary" id="authGo" style="width:100%">เข้าสู่ระบบ</button>
+  <p style="text-align:center"><a href="#" id="authSwitch">ยังไม่มีบัญชี? สมัครสมาชิก</a></p>
+</div></div>
+
+<!-- คำสั่งซื้อของฉัน -->
+<div class="overlay" id="ordersOv"><div class="modal" role="dialog" aria-modal="true">
+  <button class="x" data-close aria-label="ปิด">×</button>
+  <h2>คำสั่งซื้อของฉัน</h2><div id="ordersList"></div>
+</div></div>
+
+<!-- ตะกร้า -->
+<aside class="drawer" id="drawer" aria-label="ตะกร้าสินค้า">
+  <header><strong>ตะกร้าสินค้า</strong><button class="btn sm" id="cartClose">ปิด</button></header>
+  <div class="list" id="cartList"></div>
+  <footer id="cartFoot">
+    <div id="shipForm" hidden>
+      <div class="field"><label for="sName">ชื่อผู้รับ (ข้อมูลสมมติ)</label><input id="sName"></div>
+      <div class="field"><label for="sPhone">เบอร์โทร (ข้อมูลสมมติ)</label><input id="sPhone" inputmode="tel"></div>
+      <div class="field"><label for="sAddr">ที่อยู่จัดส่ง</label><textarea id="sAddr" rows="2"></textarea></div>
+    </div>
+    <div style="display:flex;justify-content:space-between"><span>รวมทั้งหมด</span><strong id="cartTotal">฿0</strong></div>
+    <button class="btn primary" id="checkoutBtn">สั่งซื้อ</button>
+  </footer>
+</aside>
+<div class="toast" id="toast"></div>
+
+<script src="common.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
